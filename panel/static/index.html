@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>电之脉动 · PulseVolt 2.0</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= 侧边栏 ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 44 44" aria-hidden="true">
+          <circle cx="22" cy="22" r="19" fill="none" stroke="rgba(46,230,168,.18)" stroke-width="2"/>
+          <path d="M4 24 L13 24 L16.5 14 L22 33 L26.5 20 L30 24 L40 24"
+                fill="none" stroke="url(#pulseGrad)" stroke-width="2.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="pulseGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#2ee6a8"/>
+              <stop offset="100%" stop-color="#59c8ff"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>电之脉动</h1>
+        <span>PulseVolt <b id="appVer">2.0</b></span>
+      </div>
+    </div>
+
+    <nav id="nav">
+      <button class="nav-item active" data-view="overview">
+        <svg viewBox="0 0 24 24"><path d="M4 13h5l2-7 3 14 2-7h4"/></svg>
+        <span>概览</span>
+      </button>
+      <button class="nav-item" data-view="protocols">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="18" cy="12" r="2.4"/></svg>
+        <span>协议库</span>
+        <em class="nav-badge" id="protoCount">0</em>
+      </button>
+      <button class="nav-item" data-view="smart">
+        <svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.6"/></svg>
+        <span>智能测试</span>
+      </button>
+      <button class="nav-item" data-view="capture">
+        <svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/><circle cx="12" cy="12" r="9.2" stroke-dasharray="2 3"/></svg>
+        <span>抓包破解</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.4 7.6l2 1.2M17.6 15.2l2 1.2M4.4 16.4l2-1.2M17.6 8.8l2-1.2"/></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="env-line" id="envAdmin">权限检测中…</div>
+      <div class="env-line" id="envUsbpcap">USBPcap 检测中…</div>
+      <div class="env-line dim" id="envUptime"></div>
+    </div>
+  </aside>
+
+  <!-- ================= 主区 ================= -->
+  <main>
+    <header class="topbar">
+      <div class="titles">
+        <h2 id="viewTitle">概览</h2>
+        <p id="viewDesc">实时电量、连接状态与数据来源</p>
+      </div>
+      <div class="top-actions">
+        <span class="pill" id="pillDevices">— 台设备</span>
+        <button class="btn ghost" id="btnRefresh">
+          <svg viewBox="0 0 24 24" class="ico"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4.5h-4.5"/></svg>
+          立即刷新
+        </button>
+      </div>
+    </header>
+
+    <!-- ---------- 概览 ---------- -->
+    <section class="view active" id="view-overview">
+      <div class="stat-row">
+        <div class="stat">
+          <span class="stat-label">在线设备</span>
+          <strong id="statOnline">—</strong>
+          <span class="stat-sub" id="statOnlineSub">共 — 台</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">最低电量</span>
+          <strong id="statLowest">—</strong>
+          <span class="stat-sub" id="statLowestName">—</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">协议生效</span>
+          <strong id="statProto">—</strong>
+          <span class="stat-sub" id="statProtoSub">协议库共 — 条</span>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h3>设备</h3>
+        <span class="hint">数据每 15 秒自动刷新；来源标注为实际读取通道</span>
+      </div>
+      <div class="device-grid" id="deviceGrid"></div>
+      <div class="empty" id="deviceEmpty" hidden>
+        <p>还没有发现可读设备</p>
+        <span>蓝牙设备配对后会自动出现；2.4G 设备需要先在「协议库」里启用对应协议</span>
+      </div>
+    </section>
+
+    <!-- ---------- 协议库 ---------- -->
+    <section class="view" id="view-protocols">
+      <div class="toolbar">
+        <input class="input search" id="protoSearch" placeholder="搜索协议名 / 厂商 / VID">
+        <div class="toolbar-right">
+          <button class="btn ghost" id="btnImport">
+            <svg viewBox="0 0 24 24" class="ico"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3h16v-3"/></svg>
+            导入协议
+          </button>
+          <button class="btn primary" id="btnNewProto">
+            <svg viewBox="0 0 24 24" class="ico"><path d="M12 5v14M5 12h14"/></svg>
+            新建协议
+          </button>
+        </div>
+      </div>
+      <div class="proto-grid" id="protoGrid"></div>
+      <div class="empty" id="protoEmpty" hidden>
+        <p>协议库是空的</p>
+        <span>可以从别的机器导入一条，或者去「抓包破解」自己造一条</span>
+      </div>
+    </section>
+
+    <!-- ---------- 智能测试 ---------- -->
+    <section class="view" id="view-smart">
+      <div class="smart-layout">
+        <div class="smart-left">
+          <div class="card intro">
+            <h3>它做什么</h3>
+            <ul class="bullets">
+              <li>枚举本机所有<b>厂商自定义接口</b>，读出它们是哪台设备</li>
+              <li>拿<b>协议库</b>按 VID/PID 匹配，命中的发一帧验证读数</li>
+              <li>有蓝牙通道的，用 GATT 真实电量<b>交叉核对</b>协议是否还有效</li>
+              <li>没被覆盖的设备，直接给出<b>去破解</b>的接口清单</li>
+            </ul>
+            <p class="note">
+              安全边界：只发协议库里已经确认过的帧，<b>不遍历命令空间</b>——
+              厂商接口常同时承载改 DPI、改灯效、进 DFU 的命令，乱试会让设备变砖。
+            </p>
+            <button class="btn primary block" id="btnSmartStart">开始智能测试</button>
+          </div>
+        </div>
+
+        <div class="smart-right">
+          <div class="steps" id="smartSteps"></div>
+
+          <div class="result-block" id="smartVerified" hidden>
+            <div class="section-head"><h3>已验证协议</h3><span class="hint">发帧 → 读应答 → 校验范围与稳定性</span></div>
+            <div class="verify-list" id="verifyList"></div>
+          </div>
+
+          <div class="result-block" id="smartUncovered" hidden>
+            <div class="section-head"><h3>待破解接口</h3><span class="hint">这些接口还没有可用协议</span></div>
+            <div class="table-wrap"><table class="tbl" id="uncoveredTable"></table></div>
+          </div>
+
+          <div class="result-block" id="smartPassive" hidden>
+            <div class="section-head"><h3>被动嗅探</h3><span class="hint">只读不写，看设备会不会主动上报</span></div>
+            <div class="table-wrap"><table class="tbl" id="passiveTable"></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 抓包破解 ---------- -->
+    <section class="view" id="view-capture">
+      <div class="stepper" id="stepper">
+        <div class="step-pill" data-step="1"><i>1</i><span>环境检查</span></div>
+        <div class="step-pill" data-step="2"><i>2</i><span>选择通道</span></div>
+        <div class="step-pill" data-step="3"><i>3</i><span>录制</span></div>
+        <div class="step-pill" data-step="4"><i>4</i><span>分析</span></div>
+        <div class="step-pill" data-step="5"><i>5</i><span>存为协议</span></div>
+      </div>
+
+      <!-- 步骤 1 -->
+      <div class="wizard-pane active" data-pane="1">
+        <div class="card">
+          <h3>先确认三件事</h3>
+          <div class="check-list" id="envChecks"></div>
+          <div class="wizard-actions">
+            <button class="btn primary" id="btnStep1Next">条件满足，下一步</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 2 -->
+      <div class="wizard-pane" data-pane="2">
+        <div class="card">
+          <h3>选择要监听的集线器</h3>
+          <p class="note">接收器挂在哪个集线器下不确定时，<b>全选</b>最稳：每个集线器开一个抓包进程，代价只是多一个文件。</p>
+          <div class="hub-list" id="hubList"></div>
+          <div class="field-row">
+            <label>录制时长</label>
+            <div class="seg" id="durSeg">
+              <button data-sec="30">30 秒</button>
+              <button data-sec="60" class="active">60 秒</button>
+              <button data-sec="120">120 秒</button>
+            </div>
+          </div>
+          <div class="wizard-actions">
+            <button class="btn ghost" data-goto="1">上一步</button>
+            <button class="btn primary" id="btnStartCapture">开始录制</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 3 -->
+      <div class="wizard-pane" data-pane="3">
+        <div class="card capture-live">
+          <div class="live-head">
+            <div class="rec-dot"></div>
+            <h3 id="captureTitle">录制中</h3>
+            <span class="mono" id="captureTimer">0.0s</span>
+          </div>
+          <p class="tip" id="captureTip">现在去操作厂商软件 —— 打开它、刷新一次设备、或者切换一下 DPI。电量查询通常只在「打开设备」那一瞬间发出。</p>
+          <div class="live-stats">
+            <div><span>文件</span><b id="capFiles">—</b></div>
+            <div><span>数据量</span><b id="capBytes">—</b></div>
+            <div><span>剩余</span><b id="capRemain">—</b></div>
+          </div>
+          <div class="wizard-actions">
+            <button class="btn danger" id="btnStopCapture">停止并分析</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 4 -->
+      <div class="wizard-pane" data-pane="4">
+        <div class="card">
+          <div class="section-head">
+            <h3>抓到了什么</h3>
+            <select class="input select" id="captureFileSelect"></select>
+          </div>
+          <div class="summary-line" id="captureSummary">分析中…</div>
+          <div class="table-wrap">
+            <table class="tbl" id="exchangeTable"></table>
+          </div>
+          <p class="note">点一行选中它 —— 请求帧（OUT）和应答帧（IN）会显示在下方。</p>
+          <div class="frame-view" id="frameView" hidden>
+            <div class="frame-row"><span class="tag out">OUT</span><code id="frameOut"></code></div>
+            <div class="frame-row"><span class="tag in">IN</span><code id="frameIn"></code></div>
+            <div class="frame-meta" id="frameMeta"></div>
+          </div>
+          <div class="wizard-actions">
+            <button class="btn ghost" data-goto="2">重录一次</button>
+            <button class="btn primary" id="btnToStep5" disabled>用这条帧继续</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 5 -->
+      <div class="wizard-pane" data-pane="5">
+        <div class="card">
+          <h3>定位电量字节</h3>
+          <p class="note">
+            填一个你<b>确定</b>的电量值（厂商软件上显示的数字），系统会把应答里所有等于它的位置标出来。
+            不知道的话留空，会列出所有落在 1~100 的字节。
+          </p>
+          <div class="field-row">
+            <label>此刻的真实电量</label>
+            <input class="input" id="expectInput" type="number" min="0" max="100" placeholder="例如 68">
+            <button class="btn ghost" id="btnLocate">定位</button>
+          </div>
+          <div class="byte-map" id="byteMap"></div>
+          <div class="field-row">
+            <label>电量所在下标</label>
+            <input class="input" id="offsetInput" type="number" min="0" placeholder="点上方字节填入">
+            <span class="hint" id="offsetHint">填抓包帧里的下标即可；保存时会自动 +1（读设备时前面会多一个报告 ID 字节）</span>
+          </div>
+
+          <hr class="sep">
+
+          <h3>保存为协议</h3>
+          <div class="form-grid">
+            <div class="field"><label>协议名</label><input class="input" id="protoName" placeholder="例如 狼途 T88"></div>
+            <div class="field"><label>厂商</label><input class="input" id="protoVendor" placeholder="例如 狼途 LANGTU"></div>
+            <div class="field"><label>设备类型</label>
+              <select class="input select" id="protoKind">
+                <option value="keyboard">键盘</option>
+                <option value="mouse">鼠标</option>
+                <option value="gamepad">手柄</option>
+                <option value="headset">耳机</option>
+                <option value="other">其它</option>
+              </select>
+            </div>
+            <div class="field"><label>校验方式</label>
+              <select class="input select" id="protoChecksum">
+                <option value="sum8">累加和（低 8 位）</option>
+                <option value="xor8">异或</option>
+                <option value="none">无校验</option>
+                <option value="unknown">未知</option>
+              </select>
+            </div>
+            <div class="field"><label>VID</label><input class="input mono" id="protoVid" placeholder="0x05AC"></div>
+            <div class="field"><label>PID</label><input class="input mono" id="protoPid" placeholder="0x024F"></div>
+            <div class="field"><label>UsagePage</label><input class="input mono" id="protoPage" placeholder="0xFF60"></div>
+            <div class="field"><label>Usage</label><input class="input mono" id="protoUsage" placeholder="0x61"></div>
+          </div>
+          <div class="field"><label>说明（可选）</label><textarea class="input area" id="protoNotes" rows="2" placeholder="记录一下帧结构、坑点，方便以后自己和其他人"></textarea></div>
+
+          <div class="wizard-actions">
+            <button class="btn ghost" data-goto="4">上一步</button>
+            <button class="btn primary" id="btnSaveProto">保存到协议库</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 设置 ---------- -->
+    <section class="view" id="view-settings">
+      <div class="settings-grid">
+        <div class="card">
+          <h3>刷新与提醒</h3>
+          <div class="field-row">
+            <label>刷新间隔</label>
+            <input class="input narrow" id="setInterval" type="number" min="5" max="300">
+            <span class="hint">秒</span>
+          </div>
+          <div class="field-row">
+            <label>低电量阈值</label>
+            <input class="input narrow" id="setThreshold" type="number" min="5" max="80">
+            <span class="hint">%</span>
+          </div>
+          <div class="field-row switch-row">
+            <label>显示已断开的设备</label>
+            <label class="switch"><input type="checkbox" id="setShowDisconnected"><i></i></label>
+          </div>
+          <div class="field-row switch-row">
+            <label>设备增减时通知</label>
+            <label class="switch"><input type="checkbox" id="setNotify"><i></i></label>
+          </div>
+          <button class="btn primary" id="btnSaveSettings">保存设置</button>
+        </div>
+
+        <div class="card">
+          <h3>程序</h3>
+          <div class="field-row switch-row">
+            <label>开机自动启动（最小化到托盘）</label>
+            <label class="switch"><input type="checkbox" id="setAutostart"><i></i></label>
+          </div>
+          <div class="field-row">
+            <label>抓包目录</label>
+            <button class="btn ghost small" id="btnOpenCaps">打开</button>
+          </div>
+          <div class="field-row">
+            <label>以管理员身份重启</label>
+            <button class="btn ghost small" id="btnRelaunch">重启</button>
+          </div>
+          <p class="note">抓 USB 报文必须管理员权限；提权重启后协议库、抓包文件都还在原位。</p>
+          <hr class="sep">
+          <button class="btn danger block" id="btnQuit">退出电之脉动</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 弹窗 -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <header><h3 id="modalTitle">标题</h3><button class="modal-x" id="modalClose">×</button></header>
+    <div class="modal-body" id="modalBody"></div>
+    <footer id="modalFoot"></footer>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

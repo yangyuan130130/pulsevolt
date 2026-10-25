@@ -1,0 +1,28 @@
+{
+  "id": "langtu-t88",
+  "name": "狼途 T88",
+  "vendor": "狼途 LANGTU",
+  "model": "T88",
+  "kind": "keyboard",
+  "transport": "24g",
+  "match": {
+    "vid": "0x05AC",
+    "pid": "0x024F"
+  },
+  "channel": {
+    "usage_page": "0xFF60",
+    "usage": "0x61",
+    "report_len": 33,
+    "via": "output"
+  },
+  "request": "06 20 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 21",
+  "response_offset": 4,
+  "checksum": "sum8",
+  "min_interval": 20,
+  "enabled": true,
+  "source": "builtin",
+  "notes": "33 字节报告，报告 ID 0x06。校验 = 前 32 字节累加和取低 8 位。",
+  "created": "2026-10-25T13:23:07",
+  "updated": "",
+  "builtin": true
+}

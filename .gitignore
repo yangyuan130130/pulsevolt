@@ -1,0 +1,36 @@
+# ---- 构建产物 ----
+dist/
+build/
+*.spec
+
+# ---- 运行时数据（不进版本库）----
+# settings.json 由程序启动时自动生成：它会从 protocols/ 同步出 hid_devices
+settings.json
+instance.json
+error.log
+diag.txt
+probe.txt
+_run.log
+
+# 抓包文件：含本机设备标识（MAC / 产品串），默认不进仓库
+captures/
+*.pcap
+
+# 协议库里的个性化条目：内置两条会随代码分发，
+# 自己抓包生成的协议是否入库由你决定（要分享就删掉这一行）
+# protocols/
+
+# ---- 本机构建配置 ----
+build.local.bat
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

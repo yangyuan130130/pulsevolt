@@ -1,0 +1,28 @@
+{
+  "id": "mchose-g7",
+  "name": "MCHOSE G7",
+  "vendor": "迈从 MCHOSE",
+  "model": "G7",
+  "kind": "mouse",
+  "transport": "24g",
+  "match": {
+    "vid": "0xA8A5",
+    "pid": "0x2255"
+  },
+  "channel": {
+    "usage_page": "0xFF01",
+    "usage": "0x0010",
+    "report_len": 65,
+    "via": "output"
+  },
+  "request": "00 55 30 a5 0b 2e 01 01 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ",
+  "response_offset": 9,
+  "checksum": "none",
+  "min_interval": 20,
+  "enabled": true,
+  "source": "builtin",
+  "notes": "65 字节双向报告，请求头 0x55 / 应答头 0xAA。首字节是报告 ID 占位，设备会忽略。",
+  "created": "2026-10-25T13:23:07",
+  "updated": "",
+  "builtin": true
+}

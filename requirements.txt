@@ -1,0 +1,14 @@
+# 运行依赖
+pystray>=0.19
+Pillow>=10.0
+
+# 蓝牙读取（pywinrt 拆成多个包，只装用到的）
+winrt-runtime>=2.0
+winrt-Windows.Devices.Bluetooth>=2.0
+winrt-Windows.Devices.Bluetooth.GenericAttributeProfile>=2.0
+winrt-Windows.Foundation>=2.0
+winrt-Windows.Foundation.Collections>=2.0
+winrt-Windows.Storage.Streams>=2.0
+
+# 打包（可选，只用 build.bat 时需要）
+# pyinstaller>=6.0
