@@ -24,14 +24,23 @@ from core import analyzer, protocols as protocol_lib, settings as settings_mod, 
 from core.capture import CaptureSession
 from core.manager import Manager
 from core.models import KIND_LABEL, STATUS_LABEL, TRANSPORT_LABEL, Status
-from core.paths import capture_dir, is_frozen, resource_dir
+from core.paths import app_dir, capture_dir, is_frozen, resource_dir
 from core.smarttest import SmartTest
 
 APP_NAME = "电之脉动"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.1"
 
 
 def static_dir() -> Path:
+    """界面文件目录。
+
+    优先用「程序旁边那份」（启动时由 ensure_assets 落盘）。单文件版每次启动会把
+    自身解压到系统临时目录，一旦被清理软件删掉，内置资源就读不到了——那正是
+    「打不开控制台」那次故障的根因。优先外部副本后，这个隐患就消失了。
+    """
+    local = app_dir() / "panel" / "static"
+    if (local / "index.html").is_file():
+        return local
     if is_frozen():
         return resource_dir() / "panel" / "static"
     return Path(__file__).resolve().parent / "static"
@@ -163,6 +172,46 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _missing_assets(self) -> None:
+        """界面文件丢失时给一个说得清的页面，而不是光秃秃的 404。
+
+        这种情况通常是 PyInstaller 单文件模式的临时解压目录被清理软件删了：
+        进程还在跑（代码在内存里），但每次读 html/css/js 都落空。
+        """
+        html = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<title>电之脉动 · 界面文件丢失</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#080b10;
+     color:#e7eef7;font:15px/1.9 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+.card{max-width:560px;padding:34px 38px;border-radius:16px;background:#111821;
+      border:1px solid rgba(255,255,255,.09)}
+h1{margin:0 0 6px;font-size:19px;color:#f2b544}
+p{color:#93a3b6;margin:12px 0}
+b{color:#e7eef7}
+code{background:rgba(255,255,255,.07);padding:2px 7px;border-radius:5px;font-size:13px}
+ol{color:#93a3b6;padding-left:22px} li{margin:7px 0}
+.tip{margin-top:18px;padding:12px 15px;border-left:2px solid #59c8ff;
+     background:rgba(89,200,255,.07);border-radius:0 8px 8px 0;font-size:13px;color:#8fb6cf}
+</style></head><body><div class="card">
+<h1>界面文件丢失</h1>
+<p>后台服务还在运行，但它需要的页面文件已经不在了。</p>
+<p><b>原因</b>：这个程序是单文件版，每次启动会把自身解压到系统临时目录。
+如果被清理软件（火绒、360、磁盘清理等）删掉了那个目录，就会出现这个页面。</p>
+<p><b>怎么修</b>（任选一种）：</p>
+<ol>
+  <li>右键任务栏的电池图标 → <b>退出</b>，然后重新双击 <code>PulseVolt.exe</code></li>
+  <li>任务管理器里结束所有 <code>PulseVolt.exe</code>，再重新双击</li>
+</ol>
+<div class="tip">重启后程序会重新解压，页面就回来了。电量数据和协议库都在磁盘上，不会丢。</div>
+</div></body></html>"""
+        body = html.encode("utf-8")
+        self.send_response(503)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
     # ---- 路由 ------------------------------------------------------
     def do_GET(self) -> None:   # noqa: N802
         if not self._host_ok():
@@ -175,6 +224,9 @@ class Handler(BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
 
         if route in ("/", "/index.html"):
+            if not (static_dir() / "index.html").is_file():
+                self._missing_assets()
+                return
             self._file(static_dir() / "index.html")
             return
         if route.startswith("/static/"):

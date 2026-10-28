@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 import socket
@@ -20,10 +21,11 @@ import subprocess
 import sys
 import time
 import traceback
+import urllib.request
 import webbrowser
 from pathlib import Path
 
-from core.paths import app_dir, ensure_runtime_dirs
+from core.paths import app_dir, ensure_assets, ensure_runtime_dirs
 
 INSTANCE = app_dir() / "instance.json"
 CREATE_NO_WINDOW = 0x08000000
@@ -60,15 +62,68 @@ def port_alive(port: int) -> bool:
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
+def http_ok(port: int, path: str, timeout: float = 2.5) -> bool:
+    """探测本地服务是否真能把页面给出来（不只是端口在监听）。
+
+    必须显式禁用代理：系统若配了 http_proxy，urllib 会把 127.0.0.1 也带过去。
+    """
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(f"http://127.0.0.1:{port}{path}", timeout=timeout) as resp:
+            return 200 <= resp.status < 300
+    except Exception:
+        return False
+
+
+def kill_pid(pid: int) -> bool:
+    PROCESS_TERMINATE = 0x0001
+    kernel32 = ctypes.windll.kernel32
+    handle = kernel32.OpenProcess(PROCESS_TERMINATE, False, pid)
+    if not handle:
+        return False
+    try:
+        return bool(kernel32.TerminateProcess(handle, 1))
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def alert(message: str, title: str = "电之脉动") -> None:
+    """windowed 模式没有控制台，出问题只能弹窗。"""
+    try:
+        ctypes.windll.user32.MessageBoxW(None, message, title, 0x00000010)
+    except Exception:
+        pass
+
+
 def existing_instance() -> dict | None:
-    """单实例：已经在跑就只把窗口叫出来，不重复起一个托盘。"""
+    """单实例：已经在跑**且健康**，就只把窗口叫出来。
+
+    这里加了一道健康检查。原因是踩过一次坑：单文件版把自身解压到系统临时
+    目录，被清理软件删掉后，进程还在、端口还在监听，但首页永远 404。
+    这种「半死」的进程如果被当成正常实例，双击就只会白开一个错误页——
+    用户完全没法自救。所以宁可把它结束掉，让本次启动重新解压一份干净的。
+    """
     try:
         data = json.loads(INSTANCE.read_text("utf-8"))
         port = int(data.get("port", 0))
     except Exception:
         return None
-    if port and port_alive(port):
+
+    if not (port and port_alive(port)):
+        return None
+
+    if http_ok(port, "/api/env") and http_ok(port, "/"):
         return data
+
+    # 端口活着但页面出不来 —— 结束它，走全新启动
+    pid = int(data.get("pid", 0) or 0)
+    if pid:
+        kill_pid(pid)
+        time.sleep(1.2)
+    try:
+        INSTANCE.unlink()
+    except OSError:
+        pass
     return None
 
 
@@ -95,6 +150,22 @@ def main() -> int:
         return 0
 
     import panel.server as srv
+
+    # 先把界面文件落到程序旁边，摆脱「临时目录被清理就 404」的老毛病
+    ensure_assets(srv.APP_VERSION)
+
+    # 启动自检：界面文件是启动后才会被反复读取的，缺了就等于没法用。
+    # 与其开出一个空白窗口让用户猜，不如直接说清楚。
+    missing = srv.static_dir() / "index.html"
+    if not missing.is_file():
+        alert(
+            "界面文件缺失，程序无法正常显示。\n\n"
+            "通常是系统临时目录被清理软件删掉了。\n"
+            "请点确定后，重新双击 PulseVolt.exe（程序会重新解压一份）。\n\n"
+            f"缺失位置：\n{missing}"
+        )
+        cleanup()
+        return 3
 
     httpd, port = srv.serve(args.port)
     url = f"http://127.0.0.1:{port}/"

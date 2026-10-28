@@ -27,6 +27,8 @@ copy /y settings.json dist\settings.json >nul
 if exist protocols xcopy /y /i /e /q protocols dist\protocols >nul
 if exist plugins   xcopy /y /i /e /q plugins   dist\plugins   >nul
 if not exist dist\captures md dist\captures >nul
+rem 界面文件另存一份到 dist：单文件版的临时解压目录被清理时靠它兜底
+if exist panel\static xcopy /y /i /e /q panel\static dist\panel\static >nul
 
 echo [3/3] 完成
 echo.
